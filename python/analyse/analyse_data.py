@@ -59,7 +59,7 @@ HeatMap(
 ).add_to(m)
 
 # 6. Сохранение результата в HTML-файл
-output_file = 'switzerland_traffic_heatmap.html'
+output_file = '../../output/switzerland_traffic_heatmap.html'
 m.save(output_file)
 
 print(f"Готово! Тепловая карта сохранена в файл: {output_file}")
