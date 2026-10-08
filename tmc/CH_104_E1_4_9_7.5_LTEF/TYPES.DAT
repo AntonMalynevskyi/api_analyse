@@ -1,0 +1,26 @@
+﻿CLASS;TCD;TDESC;TNATCD;TNATDESC
+A;1;continent;;
+A;2;country group;;
+A;3;country;;
+A;5;water area;;
+A;6;fuzzy area;;
+A;7;order 1 area;;
+A;8;order 2 area;;
+A;9;order 3 area;;
+A;10;order 4 area;;
+A;11;order 5 area;;
+A;12;application region;;
+L;1;road;;
+L;2;ring road;;
+L;3;order 1 segment;;
+L;4;order 2 segment;;
+L;5;urban street;;
+L;6;vehicular link;;
+L;7;link road;;
+L;8;parallel road;;
+P;1;junction;;
+P;2;intermediate point;;
+P;3;other landmark point;;
+P;4;link road point;;
+P;5;parking POI;;
+P;6;other isolated POI;;

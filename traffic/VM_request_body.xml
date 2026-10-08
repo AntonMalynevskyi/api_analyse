@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <d2LogicalModel xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" modelBaseVersion="2" xmlns="http://datex2.eu/schema/2/2_0">
+    <exchange>
+        <supplierIdentification>
+	    <country>ch</country>
+	    <nationalIdentifier>FEDRO</nationalIdentifier>
+        </supplierIdentification>
+        <subscription>
+	    <operatingMode>operatingMode1</operatingMode>
+	    <subscriptionStartTime>2025-05-01T08:00:00.00+01:00</subscriptionStartTime>
+	    <subscriptionState>active</subscriptionState>
+	    <updateMethod>singleElementUpdate</updateMethod>
+	    <target>
+		<address></address>
+		<protocol>http</protocol>
+	    </target>
+        </subscription>
+    </exchange>
+    </d2LogicalModel>
+  </soap:Body>
+</soap:Envelope>

@@ -1,0 +1,35 @@
+﻿CLASS;TCD;STCD;SDESC;SNATCODE;SNATDESC
+A;1;0;continent;;Kontinent
+A;3;0;country;;Land
+A;5;2;lake;;See
+A;7;0;order 1 area;;Region
+A;8;0;order 2 area;;Kanton
+A;9;1;rural county;;
+A;9;2;urban county;;
+L;1;1;motorway;;Autobahn
+L;1;2;1st class road;;Hauptstrasse
+L;1;3;2nd class road;;Verbindungsstrasse
+L;1;4;3rd class road;;Übrige Strassen
+L;2;2;other ring road;;
+L;3;0;order 1 segment;;Segment 1
+L;5;0;urban street;;
+L;6;1;ferry;;Schiffsverbindung
+L;6;2;vehicular rail link;;Bahnverbindung
+P;1;1;motorway intersection;;Autobahnkreuz
+P;1;2;motorway triangle;;Autobahndreieck
+P;1;3;motorway junction;;Anschluss
+P;1;4;motorway exit;;
+P;1;8;roundabout;;
+P;1;9;gyratory;;
+P;1;11;cross-roads;;Kreuzung
+P;3;1;tunnel;;Tunnel
+P;3;2;bridge;;Brücke
+P;3;3;service area;;Raststätte
+P;3;4;rest area;;Parkplatz
+P;3;14;border/frontier;;
+P;3;15;customs post;;Zollstation
+P;3;17;ferry terminal;;Hafen
+P;3;28;station;;Bahnhof
+P;3;31;stadium;;
+P;3;37;place name;;Ortschaft
+P;3;42;mountain crossing/pass;;Pass
