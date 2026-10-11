@@ -1,0 +1,53 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+load_dotenv(BASE_DIR / ".env")
+
+
+@dataclass(frozen=True)
+class DatabaseConfig:
+    host: str = os.getenv("POSTGRES_HOST", "localhost")
+    port: int = int(os.getenv("POSTGRES_PORT", "5432"))
+    name: str = os.getenv("POSTGRES_DB", "postgres")
+    user: str = os.getenv("POSTGRES_USER", "postgres")
+    password: str = os.getenv("POSTGRES_PASSWORD", "")
+
+    @property
+    def url(self) -> str:
+        """SQLAlchemy / Psycopg v3 connection URL."""
+        return f"postgresql+psycopg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
+
+
+@dataclass(frozen=True)
+class APIConfig:
+    basemap_key: str = os.getenv("BASEMAP_API_KEY", "")
+    opentransport_key: str = os.getenv("OPENTRANSPORTDATA_API_KEY", "")
+
+    def validate(self) -> None:
+        """Optionally check for critical keys on startup."""
+        if not self.basemap_key:
+            raise ValueError("BASEMAP_API_KEY is not set in environment or .env file.")
+        if not self.opentransport_key:
+            raise ValueError("OPENTRANSPORTDATA_API_KEY is not set in environment or .env file.")
+
+
+@dataclass(frozen=True)
+class PathConfig:
+    root: Path = BASE_DIR
+    data_raw: Path = BASE_DIR / "data" / "raw"
+    data_processed: Path = BASE_DIR / "data" / "processed"
+    docs: Path = BASE_DIR / "docs"
+
+
+@dataclass(frozen=True)
+class Config:
+    db: DatabaseConfig = DatabaseConfig()
+    api: APIConfig = APIConfig()
+    paths: PathConfig = PathConfig()
+
+
+config = Config()

@@ -1,0 +1,89 @@
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import delete
+from api_analyse.db import get_db, TrafficSituation
+
+NAMESPACES = {
+    "soap": "http://schemas.xmlsoap.org/soap/envelope/",
+    "dx": "http://datex2.eu/schema/2/2_0",
+    "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+}
+XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
+
+
+def parse_locations(record_elem: ET.Element) -> dict:
+    loc_elem = record_elem.find("dx:groupOfLocations", NAMESPACES)
+    if loc_elem is None:
+        return {}
+    location_data = {"type": loc_elem.attrib.get(XSI_TYPE, "").split(":")[-1]}
+    alertc_elem = loc_elem.find(".//dx:alertCLinear", NAMESPACES) or loc_elem.find(".//dx:alertCPoint", NAMESPACES)
+    if alertc_elem is not None:
+        dir_elem = alertc_elem.find(".//dx:alertCDirectionCoded", NAMESPACES)
+        primary_code = alertc_elem.find(".//dx:alertCMethod4PrimaryPointLocation//dx:specificLocation", NAMESPACES)
+        secondary_code = alertc_elem.find(".//dx:alertCMethod4SecondaryPointLocation//dx:specificLocation", NAMESPACES)
+        location_data["alert_c"] = {
+            "table_number": getattr(alertc_elem.find("dx:alertCLocationTableNumber", NAMESPACES), "text", None),
+            "table_version": getattr(alertc_elem.find("dx:alertCLocationTableVersion", NAMESPACES), "text", None),
+            "direction": getattr(dir_elem, "text", None),
+            "primary_location_code": getattr(primary_code, "text", None),
+            "secondary_location_code": getattr(secondary_code, "text", None),
+        }
+    return location_data
+
+
+def parse_comments(record_elem: ET.Element) -> dict:
+    comments = {}
+    for comment_node in record_elem.findall("dx:generalPublicComment", NAMESPACES):
+        comment_type_elem = comment_node.find("dx:commentType", NAMESPACES)
+        comment_type = comment_type_elem.text if comment_type_elem is not None else "general"
+        for val in comment_node.findall(".//dx:values/dx:value", NAMESPACES):
+            lang = val.attrib.get("lang", "default")
+            text = val.text.strip() if val.text else ""
+            if text:
+                comments.setdefault(comment_type, {})[lang] = text
+    return comments
+
+
+def parse_datex2_xml(xml_path: str | Path) -> list[dict]:
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+    situations_data = []
+    for situation in root.findall(".//dx:situation", NAMESPACES):
+        sit_id = situation.attrib.get("id")
+        sit_version = situation.attrib.get("version")
+        for record in situation.findall("dx:situationRecord", NAMESPACES):
+            validity = record.find("dx:validity", NAMESPACES)
+            record_payload = {
+                "record_id": record.attrib.get("id"),
+                "situation_id": sit_id,
+                "situation_version": sit_version,
+                "record_version": record.attrib.get("version"),
+                "record_type": record.attrib.get(XSI_TYPE, "").split(":")[-1],
+                "subtype": (
+                        getattr(record.find("dx:abnormalTrafficType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:roadMaintenanceType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:roadOrCarriagewayOrLaneManagementType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:carParkStatus", NAMESPACES), "text", None)
+                ),
+                "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text",
+                                        "false") == "true",
+                "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text",
+                                           None) if validity else None,
+                "start_time": getattr(validity.find(".//dx:overallStartTime", NAMESPACES), "text",
+                                      None) if validity else None,
+                "end_time": getattr(validity.find(".//dx:endOfPeriod", NAMESPACES), "text", None) if validity else None,
+                "comments": parse_comments(record),
+                "location": parse_locations(record),
+            }
+            situations_data.append(record_payload)
+    return situations_data
+
+
+def save_road_data(xml_path: str | Path) -> None:
+    records = parse_datex2_xml(xml_path)
+    with get_db() as session:
+        if records:
+            session.execute(delete(TrafficSituation))
+            session.execute(insert(TrafficSituation).values(records))
+            print(f"Successfully loaded {len(records)} records into PostgreSQL.")
