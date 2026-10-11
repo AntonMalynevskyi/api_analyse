@@ -25,11 +25,15 @@ class DatabaseConfig:
 @dataclass(frozen=True)
 class APIConfig:
     opentransport_key: str = os.getenv("OPENTRANSPORTDATA_API_KEY", "")
+    traffic_api_url: str = os.getenv(
+        "TRAFFIC_API_URL", "https://api.opentransportdata.swiss/TDP/Soap_Datex2/TrafficSituations/Pull")
 
     def validate(self) -> None:
         """Optionally check for critical keys on startup."""
         if not self.opentransport_key:
             raise ValueError("OPENTRANSPORTDATA_API_KEY is not set in environment or .env file.")
+        if not self.traffic_api_url:
+            raise ValueError("TRAFFIC_API_URL is not set in environment or .env file.")
 
 
 @dataclass(frozen=True)

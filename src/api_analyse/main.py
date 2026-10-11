@@ -1,6 +1,6 @@
 import argparse
 from api_analyse.analysis import generate_heatmap
-from api_analyse.collectors.download_data import download_road_data
+from api_analyse.collectors.download_data import download_traffic_data
 from api_analyse.parsers.parse_road_data import save_road_data
 from api_analyse.parsers.parse_tmc import load_tmc_locations
 from api_analyse.config import config
@@ -26,7 +26,7 @@ def main() -> None:
 
     if args.download:
         print("Downloading fresh DATEX II XML road data...")
-        download_road_data()
+        download_traffic_data()
 
     print("Loading TMC location points...")
     load_tmc_locations()
