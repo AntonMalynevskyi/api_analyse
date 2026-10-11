@@ -1,14 +1,15 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import delete
-from api_analyse.db import get_db, TrafficSituation
+from api_analyse.db import TrafficSituation, TmcLocation, get_db
 
 NAMESPACES = {
     "soap": "http://schemas.xmlsoap.org/soap/envelope/",
     "dx": "http://datex2.eu/schema/2/2_0",
     "xsi": "http://www.w3.org/2001/XMLSchema-instance",
 }
+
 XSI_TYPE = "{http://www.w3.org/2001/XMLSchema-instance}type"
 
 
@@ -45,7 +46,10 @@ def parse_comments(record_elem: ET.Element) -> dict:
     return comments
 
 
-def parse_datex2_xml(xml_path: str | Path) -> list[dict]:
+def parse_datex2_xml(
+    xml_path: str | Path,
+    tmc_lookup: dict[int, tuple[float, float]] | None = None,
+) -> list[dict]:
     tree = ET.parse(xml_path)
     root = tree.getroot()
     situations_data = []
@@ -54,6 +58,19 @@ def parse_datex2_xml(xml_path: str | Path) -> list[dict]:
         sit_version = situation.attrib.get("version")
         for record in situation.findall("dx:situationRecord", NAMESPACES):
             validity = record.find("dx:validity", NAMESPACES)
+            location_dict = parse_locations(record)
+
+            latitude, longitude = None, None
+            if tmc_lookup and "alert_c" in location_dict:
+                primary_code_str = location_dict["alert_c"].get("primary_location_code")
+                if primary_code_str is not None:
+                    try:
+                        code = int(primary_code_str)
+                        if code in tmc_lookup:
+                            latitude, longitude = tmc_lookup[code]
+                    except (ValueError, TypeError):
+                        pass
+
             record_payload = {
                 "record_id": record.attrib.get("id"),
                 "situation_id": sit_id,
@@ -61,28 +78,34 @@ def parse_datex2_xml(xml_path: str | Path) -> list[dict]:
                 "record_version": record.attrib.get("version"),
                 "record_type": record.attrib.get(XSI_TYPE, "").split(":")[-1],
                 "subtype": (
-                        getattr(record.find("dx:abnormalTrafficType", NAMESPACES), "text", None)
-                        or getattr(record.find("dx:roadMaintenanceType", NAMESPACES), "text", None)
-                        or getattr(record.find("dx:roadOrCarriagewayOrLaneManagementType", NAMESPACES), "text", None)
-                        or getattr(record.find("dx:carParkStatus", NAMESPACES), "text", None)
+                    getattr(record.find("dx:abnormalTrafficType", NAMESPACES), "text", None)
+                    or getattr(record.find("dx:roadMaintenanceType", NAMESPACES), "text", None)
+                    or getattr(record.find("dx:roadOrCarriagewayOrLaneManagementType", NAMESPACES), "text", None)
+                    or getattr(record.find("dx:carParkStatus", NAMESPACES), "text", None)
                 ),
-                "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text",
-                                        "false") == "true",
-                "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text",
-                                           None) if validity else None,
-                "start_time": getattr(validity.find(".//dx:overallStartTime", NAMESPACES), "text",
-                                      None) if validity else None,
+                "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text", "false") == "true",
+                "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text", None) if validity else None,
+                "start_time": getattr(validity.find(".//dx:overallStartTime", NAMESPACES), "text", None) if validity else None,
                 "end_time": getattr(validity.find(".//dx:endOfPeriod", NAMESPACES), "text", None) if validity else None,
                 "comments": parse_comments(record),
-                "location": parse_locations(record),
+                "location": location_dict,
+                "latitude": latitude,
+                "longitude": longitude,
             }
             situations_data.append(record_payload)
     return situations_data
 
 
 def save_road_data(xml_path: str | Path) -> None:
-    records = parse_datex2_xml(xml_path)
     with get_db() as session:
+        tmc_stmt = select(TmcLocation.location_code, TmcLocation.latitude, TmcLocation.longitude).where(
+            TmcLocation.latitude.is_not(None),
+            TmcLocation.longitude.is_not(None),
+        )
+        tmc_rows = session.execute(tmc_stmt).all()
+        tmc_lookup = {row.location_code: (row.latitude, row.longitude) for row in tmc_rows}
+
+        records = parse_datex2_xml(xml_path, tmc_lookup=tmc_lookup)
         if records:
             session.execute(delete(TrafficSituation))
             session.execute(insert(TrafficSituation).values(records))

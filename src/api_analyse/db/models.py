@@ -3,7 +3,6 @@ from typing import Optional
 from sqlalchemy import Boolean, DateTime, Float, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
-
 from api_analyse.db.base import Base
 
 
@@ -22,6 +21,8 @@ class TrafficSituation(Base):
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     comments: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     location: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
