@@ -14,7 +14,7 @@ class DatabaseConfig:
     port: int = int(os.getenv("POSTGRES_PORT", "5432"))
     name: str = os.getenv("POSTGRES_DB", "postgres")
     user: str = os.getenv("POSTGRES_USER", "postgres")
-    password: str = os.getenv("POSTGRES_PASSWORD", "")
+    password: str = os.getenv("POSTGRES_PASSWORD", "password")
 
     @property
     def url(self) -> str:
@@ -24,13 +24,10 @@ class DatabaseConfig:
 
 @dataclass(frozen=True)
 class APIConfig:
-    basemap_key: str = os.getenv("BASEMAP_API_KEY", "")
     opentransport_key: str = os.getenv("OPENTRANSPORTDATA_API_KEY", "")
 
     def validate(self) -> None:
         """Optionally check for critical keys on startup."""
-        if not self.basemap_key:
-            raise ValueError("BASEMAP_API_KEY is not set in environment or .env file.")
         if not self.opentransport_key:
             raise ValueError("OPENTRANSPORTDATA_API_KEY is not set in environment or .env file.")
 

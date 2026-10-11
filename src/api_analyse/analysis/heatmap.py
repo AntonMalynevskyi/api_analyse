@@ -36,12 +36,7 @@ def generate_heatmap(
         df = pd.read_sql(HEATMAP_QUERY, s.connection())
         print(f"Found {len(df)} traffic incidents with valid coordinates.")
 
-        m = folium.Map(
-            location=[46.8, 8.2],  # Switzerland centered
-            zoom_start=8,
-            tiles=f"https://basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}.png?key={config.api.basemap_key}",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        )
+        m = folium.Map(location=[46.8, 8.2], zoom_start=8, tiles="OpenStreetMap")
 
         # Fast vectorization instead of slow df.iterrows()
         heat_data = df[["latitude", "longitude"]].values.tolist()
