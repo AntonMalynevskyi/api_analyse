@@ -2,12 +2,12 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 import xml.etree.ElementTree as ET
+from typing import Annotated, Optional
+
 import requests
 import typer
 
 from api_analyse.utils.config import config
-
-logger = logging.getLogger(__name__)
 
 app = typer.Typer()
 
@@ -17,10 +17,20 @@ class DownloadError(Exception):
     pass
 
 
+@app.command(name="download-data")
 def download_traffic_data(
+        # 1. No "= None" at the end of this block
+        api_key: Annotated[
+            Optional[str],
+            typer.Option(
+                "--api-key",
+                default_factory=lambda: config.api.opentransport_key or None,
+                # 2. No prompt="..." or hide_input=True here
+                help="API key. Defaults to config settings."
+            )
+        ],
         if_modified_since: datetime = None,
         timeout: int = 30,
-        api_key: str = config.api.opentransport_key
 ) -> Path | None:
     """
     Requires OpenTransport API key in .env
@@ -28,7 +38,9 @@ def download_traffic_data(
     Returns the destination Path if new data is saved, or None if unchanged (HTTP 304).
     """
     if not api_key:
-        raise DownloadError("Missing OpenTransport API key in .env to download traffic data.")
+        api_key = typer.prompt(
+            "You can also add it in the .env file to skip this step\nPlease enter your OpenTransport API key. ",
+            hide_input=True)
 
     traffic_dir = config.paths.data_raw / "traffic"
     request_body_path = traffic_dir / "VM_request_body.xml"
@@ -66,7 +78,7 @@ def download_traffic_data(
         response = requests.post(url, headers=headers, data=data, timeout=timeout)
 
         if response.status_code == 304:
-            logger.info("Traffic data unchanged since last request (304 Not Modified).")
+            print("Traffic data unchanged since last request (304 Not Modified).")
             return None
 
         response.raise_for_status()
@@ -77,11 +89,11 @@ def download_traffic_data(
         traffic_dir.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(response.content)
 
-        logger.info(f"Successfully saved traffic data to {output_path}")
+        print(f"Successfully saved traffic data to {output_path}")
         return output_path
 
     except requests.RequestException as exc:
-        logger.error(f"HTTP POST request to {url} failed: {exc}")
+        print(f"HTTP POST request to {url} failed: {exc}")
         raise DownloadError(f"Failed to fetch road data: {exc}") from exc
 
 
@@ -92,11 +104,3 @@ def _is_soap_fault(xml_bytes: bytes) -> bool:
         return any(elem.tag.endswith("Fault") for elem in root.iter())
     except ET.ParseError:
         return True
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    try:
-        download_traffic_data()
-    except DownloadError as err:
-        logger.error(err)
