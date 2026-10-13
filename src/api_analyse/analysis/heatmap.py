@@ -1,10 +1,11 @@
 from pathlib import Path
 import folium
+import typer
 from folium.plugins import HeatMap
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from api_analyse.config import config
+from api_analyse.utils.config import config
 from api_analyse.db import get_db
 
 HEATMAP_QUERY = text(
@@ -17,17 +18,13 @@ HEATMAP_QUERY = text(
     """
 )
 
-
 def generate_heatmap(
-        output_file: str | Path | None = None,
+        output_path: str = config.paths.data_processed / "switzerland_traffic_heatmap.html",
 ) -> Path:
     """Generates an HTML heatmap of traffic incidents across Switzerland."""
-    output_path = (
-        Path(output_file)
-        if output_file
-        else config.paths.data_processed / "switzerland_traffic_heatmap.html"
-    )
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    output_file = Path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     def _render(s: Session) -> Path:
         heat_data = []
@@ -42,9 +39,9 @@ def generate_heatmap(
             min_opacity=0.3,
             gradient={0.2: "blue", 0.4: "lime", 0.6: "yellow", 0.8: "orange", 1.0: "red"},
         ).add_to(m)
-        m.save(output_path)
-        print(f"Heatmap saved to: {output_path}")
-        return output_path
+        m.save(output_file)
+        print(f"Heatmap saved to: {output_file}")
+        return output_file
 
     with get_db() as db_session:
         return _render(db_session)

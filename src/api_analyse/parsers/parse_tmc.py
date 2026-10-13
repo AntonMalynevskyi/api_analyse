@@ -1,8 +1,7 @@
-import os
 from pathlib import Path
 import pandas as pd
 
-from api_analyse.config import config
+from api_analyse.utils.config import config
 from api_analyse.db import get_db
 
 

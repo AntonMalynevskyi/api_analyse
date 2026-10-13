@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert
+from datetime import datetime
+from sqlalchemy import delete, select, insert
 from api_analyse.db import TrafficSituation, TmcLocation, get_db
 
 NAMESPACES = {
@@ -60,6 +60,9 @@ def parse_datex2_xml(
             validity = record.find("dx:validity", NAMESPACES)
             location_dict = parse_locations(record)
 
+            start_str = getattr(validity.find(".//dx:overallStartTime", NAMESPACES), "text", None) if validity else None
+            end_str = getattr(validity.find(".//dx:endOfPeriod", NAMESPACES), "text", None) if validity else None
+
             latitude, longitude = None, None
             if tmc_lookup and "alert_c" in location_dict:
                 primary_code_str = location_dict["alert_c"].get("primary_location_code")
@@ -85,8 +88,8 @@ def parse_datex2_xml(
                 ),
                 "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text", "false") == "true",
                 "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text", None) if validity else None,
-                "start_time": getattr(validity.find(".//dx:overallStartTime", NAMESPACES), "text", None) if validity else None,
-                "end_time": getattr(validity.find(".//dx:endOfPeriod", NAMESPACES), "text", None) if validity else None,
+                "start_time": datetime.fromisoformat(start_str) if start_str else None,
+                "end_time": datetime.fromisoformat(end_str) if end_str else None,
                 "comments": parse_comments(record),
                 "location": location_dict,
                 "latitude": latitude,
@@ -108,5 +111,5 @@ def save_road_data(xml_path: str | Path) -> None:
         records = parse_datex2_xml(xml_path, tmc_lookup=tmc_lookup)
         if records:
             session.execute(delete(TrafficSituation))
-            session.execute(insert(TrafficSituation).values(records))
+            session.execute(insert(TrafficSituation), records)
             print(f"Successfully loaded {len(records)} records into PostgreSQL.")

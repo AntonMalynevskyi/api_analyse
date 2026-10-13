@@ -3,10 +3,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import requests
+import typer
 
-from api_analyse.config import config
+from api_analyse.utils.config import config
 
 logger = logging.getLogger(__name__)
+
+app = typer.Typer()
 
 
 class DownloadError(Exception):
@@ -15,17 +18,17 @@ class DownloadError(Exception):
 
 
 def download_traffic_data(
-        if_modified_since: datetime | str | None = None,
+        if_modified_since: datetime = None,
         timeout: int = 30,
+        api_key: str = config.api.opentransport_key
 ) -> Path | None:
     """
+    Requires OpenTransport API key in .env
     Downloads DATEX II traffic XML from OpenTransportData Swiss using SOAP POST request.
-
     Returns the destination Path if new data is saved, or None if unchanged (HTTP 304).
     """
-    api_key = getattr(config.api, "opentransport_key", None)
     if not api_key:
-        raise DownloadError("Missing OpenTransport API key in configuration (config.api.opentransport_key).")
+        raise DownloadError("Missing OpenTransport API key in .env to download traffic data.")
 
     traffic_dir = config.paths.data_raw / "traffic"
     request_body_path = traffic_dir / "VM_request_body.xml"

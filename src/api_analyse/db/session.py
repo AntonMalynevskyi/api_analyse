@@ -3,11 +3,12 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from api_analyse.config import config
+from api_analyse.utils.config import config
 
 engine = create_engine(
     config.db.url,
     pool_pre_ping=True,
+    connect_args={"check_same_thread": False},
     echo=False,  # Set to True to log raw SQL queries during debugging
 )
 
