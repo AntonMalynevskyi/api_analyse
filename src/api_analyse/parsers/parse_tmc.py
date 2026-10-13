@@ -1,12 +1,13 @@
 from pathlib import Path
 import pandas as pd
+from sqlalchemy import select, inspect
 
 from api_analyse.utils.config import config
-from api_analyse.db import get_db
+from api_analyse.db import get_db, TmcLocation
 
 
 def load_tmc_locations(
-    data_dir: str | Path = config.paths.data_raw / "tmc" / "CH_104_E1_4_9_7.5_LTEF"
+        data_dir: Path = config.paths.data_raw / "tmc" / "CH_104_E1_4_9_7.5_LTEF"
 ) -> None:
     data_dir = Path(data_dir)
     df_points = pd.read_csv(data_dir / "POINTS.DAT", sep=";", encoding="utf-8")
@@ -43,8 +44,14 @@ def load_tmc_locations(
         "description": df_tmc["NAME"],
         "latitude": df_tmc["latitude"],
         "longitude": df_tmc["longitude"],
-    }).drop_duplicates(subset=["location_code"])
-
+    })
     with get_db() as session:
-        df_final.to_sql("tmc_locations", session.connection(), if_exists="replace", index=False)
-        print(f"Loaded {len(df_final)} TMC locations into database.")
+        inspector = inspect(session.connection())
+        if inspector.has_table(TmcLocation.__tablename__):
+            existing_stmt = select(TmcLocation.latitude, TmcLocation.longitude)
+            existing_pairs = {tuple(row) for row in session.execute(existing_stmt).all()}
+            df_final["_composite_key"] = list(zip(df_final["latitude"], df_final["longitude"]))
+            df_final = df_final[~df_final["_composite_key"].isin(existing_pairs)].copy()
+            df_final = df_final.drop(columns=["_composite_key"])
+        df_final.to_sql("tmc_locations", session.connection(), if_exists="append", index=False)
+        print(f"Loaded {len(df_final)} new TMC locations into database.")

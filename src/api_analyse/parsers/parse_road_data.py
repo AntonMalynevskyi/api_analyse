@@ -1,8 +1,12 @@
 import xml.etree.ElementTree as ET
+import pandas as pd
+import json
 from pathlib import Path
 from datetime import datetime
-from sqlalchemy import delete, select, insert
-from api_analyse.db import TrafficSituation, TmcLocation, get_db
+from sqlalchemy import delete, select, inspect
+from api_analyse.db import TrafficSituation, TmcLocation, get_db, init_db
+from api_analyse.parsers import load_tmc_locations
+from api_analyse.utils.config import config
 
 NAMESPACES = {
     "soap": "http://schemas.xmlsoap.org/soap/envelope/",
@@ -47,12 +51,13 @@ def parse_comments(record_elem: ET.Element) -> dict:
 
 
 def parse_datex2_xml(
-    xml_path: str | Path,
-    tmc_lookup: dict[int, tuple[float, float]] | None = None,
-) -> list[dict]:
+        xml_path: str | Path,
+        tmc_lookup: dict[int, tuple[float, float]] | None = None,
+) -> pd.DataFrame:
     tree = ET.parse(xml_path)
     root = tree.getroot()
     situations_data = []
+
     for situation in root.findall(".//dx:situation", NAMESPACES):
         sit_id = situation.attrib.get("id")
         sit_version = situation.attrib.get("version")
@@ -81,26 +86,38 @@ def parse_datex2_xml(
                 "record_version": record.attrib.get("version"),
                 "record_type": record.attrib.get(XSI_TYPE, "").split(":")[-1],
                 "subtype": (
-                    getattr(record.find("dx:abnormalTrafficType", NAMESPACES), "text", None)
-                    or getattr(record.find("dx:roadMaintenanceType", NAMESPACES), "text", None)
-                    or getattr(record.find("dx:roadOrCarriagewayOrLaneManagementType", NAMESPACES), "text", None)
-                    or getattr(record.find("dx:carParkStatus", NAMESPACES), "text", None)
+                        getattr(record.find("dx:abnormalTrafficType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:roadMaintenanceType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:roadOrCarriagewayOrLaneManagementType", NAMESPACES), "text", None)
+                        or getattr(record.find("dx:carParkStatus", NAMESPACES), "text", None)
                 ),
-                "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text", "false") == "true",
-                "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text", None) if validity else None,
+                "is_cancelled": getattr(record.find(".//dx:lifeCycleManagement/dx:cancel", NAMESPACES), "text",
+                                        "false") == "true",
+                "validity_status": getattr(validity.find("dx:validityStatus", NAMESPACES), "text",
+                                           None) if validity else None,
                 "start_time": datetime.fromisoformat(start_str) if start_str else None,
                 "end_time": datetime.fromisoformat(end_str) if end_str else None,
-                "comments": parse_comments(record),
-                "location": location_dict,
+
+                "comments": json.dumps(parse_comments(record)),
+                "location": json.dumps(location_dict),
+
                 "latitude": latitude,
                 "longitude": longitude,
             }
             situations_data.append(record_payload)
-    return situations_data
+
+    return pd.DataFrame(situations_data)
 
 
-def save_road_data(xml_path: str | Path) -> None:
+def save_road_data(xml_path: Path = config.paths.data_raw / "traffic" / "traffic_situations.xml") -> None:
     with get_db() as session:
+        inspector = inspect(session.connection())
+        tmc_lookup = {}
+
+        if not inspector.has_table(TmcLocation.__tablename__):
+            load_tmc_locations()
+            print("Warning: 'tmc_locations' table not found. Creating new one and filling.")
+
         tmc_stmt = select(TmcLocation.location_code, TmcLocation.latitude, TmcLocation.longitude).where(
             TmcLocation.latitude.is_not(None),
             TmcLocation.longitude.is_not(None),
@@ -108,8 +125,25 @@ def save_road_data(xml_path: str | Path) -> None:
         tmc_rows = session.execute(tmc_stmt).all()
         tmc_lookup = {row.location_code: (row.latitude, row.longitude) for row in tmc_rows}
 
-        records = parse_datex2_xml(xml_path, tmc_lookup=tmc_lookup)
-        if records:
-            session.execute(delete(TrafficSituation))
-            session.execute(insert(TrafficSituation), records)
-            print(f"Successfully loaded {len(records)} records into PostgreSQL.")
+        df = parse_datex2_xml(xml_path, tmc_lookup=tmc_lookup)
+
+        if not df.empty:
+            if inspector.has_table("traffic_situations"):
+                existing_ids_stmt = select(TrafficSituation.record_id)
+                existing_ids = set(session.execute(existing_ids_stmt).scalars().all())
+                new_df = df[~df["record_id"].isin(existing_ids)]
+            else:
+                new_df = df
+
+            if not new_df.empty:
+                new_df.to_sql(
+                    name="traffic_situations",
+                    con=session.connection(),
+                    if_exists="append",
+                    index=False,
+                    chunksize=1000
+                )
+                session.commit()
+                print(f"Successfully appended {len(new_df)} new records (skipped {len(df) - len(new_df)} existing).")
+            else:
+                print(f"No new records to append. All {len(df)} records are already in the database.")

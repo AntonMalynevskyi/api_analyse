@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
 import xml.etree.ElementTree as ET
