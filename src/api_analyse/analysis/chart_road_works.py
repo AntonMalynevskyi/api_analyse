@@ -43,7 +43,7 @@ def generate_chart_road_work(
             data_pivot = data_pivot.sort_values(by="Total", ascending=False).drop(columns=["Total"])
     except DatabaseError:
         print(
-            "Database error. Probably, database file wasn't created or it is empty. Please run \'api-analyse load-traffic\'")
+            "Database error. Probably, database file wasn't created or it is empty. Please run 'api-analyse data'")
     fig, ax = plt.subplots(figsize=(12, 8), layout="constrained")
 
     data_pivot.plot(kind="bar", stacked=True, ax=ax, width=0.75)
@@ -59,6 +59,7 @@ def generate_chart_road_work(
     plt.legend(title="Subtypes", bbox_to_anchor=(1.05, 1), loc="upper left")
 
     plt.savefig(output_path, bbox_inches="tight")
+    print(f"Chart saved to: {output_file}")
 
 
 if __name__ == "__main__":

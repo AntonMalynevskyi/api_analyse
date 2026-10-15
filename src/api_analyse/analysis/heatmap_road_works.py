@@ -54,5 +54,5 @@ def generate_heatmap_road_work(
             return output_file
     except DatabaseError:
         print(
-            "Database error. Probably, database file wasn't created or it is empty. Please run \'api-analyse load-traffic\'")
+            "Database error. Probably, database file wasn't created or it is empty. Please run 'api-analyse data'")
     return None

@@ -8,11 +8,12 @@ dependencies = [
     "pandas>=3.0.6",
     "python-dotenv>=1.2.4",
     "sqlalchemy>=2.1.4",
-    "requests>=2.31.0",
     "typer>=0.27.3",
     "retry-requests>=2.0.0",
     "requests-cache>=1.3.3",
     "matplotlib>=3.11.2",
+    "urllib3>=2.8.0",
+    "requests>=2.34.2",
 ]
 
 [project.scripts]

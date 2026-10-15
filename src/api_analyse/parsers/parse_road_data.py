@@ -3,7 +3,7 @@ import pandas as pd
 import json
 from pathlib import Path
 from datetime import datetime
-from sqlalchemy import delete, select, inspect
+from sqlalchemy import select, inspect
 from api_analyse.db import TrafficSituation, TmcLocation, get_db, init_db
 from api_analyse.parsers import load_tmc_locations
 from api_analyse.utils.config import config
@@ -112,7 +112,6 @@ def parse_datex2_xml(
 def save_road_data(xml_path: Path = config.paths.data_raw / "traffic" / "traffic_situations.xml") -> None:
     with get_db() as session:
         inspector = inspect(session.connection())
-        tmc_lookup = {}
 
         if not inspector.has_table(TmcLocation.__tablename__):
             load_tmc_locations()

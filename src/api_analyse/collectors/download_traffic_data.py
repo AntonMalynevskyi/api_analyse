@@ -8,15 +8,12 @@ import typer
 
 from api_analyse.utils.config import config
 
-app = typer.Typer()
-
 
 class DownloadError(Exception):
     """Custom exception raised when road data retrieval or validation fails."""
     pass
 
 
-@app.command(name="download-data")
 def download_traffic_data(
         # 1. No "= None" at the end of this block
         api_key: Annotated[
