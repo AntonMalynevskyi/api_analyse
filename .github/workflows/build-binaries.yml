@@ -1,0 +1,76 @@
+name: Build binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: ${{ matrix.asset }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: linux-x86_64
+          - os: windows-latest
+            asset: windows-x86_64
+          - os: macos-latest
+            asset: macos-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --group build --frozen
+
+      - name: Build binary
+        run: uv run pyinstaller --noconfirm --clean api-analyse.spec
+
+      - name: Package binary with data/raw
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME="api-analyse-${{ matrix.asset }}"
+          STAGE="dist/stage/${NAME}"
+          mkdir -p "${STAGE}/data"
+          cp -a dist/api-analyse/. "${STAGE}/"
+          cp -a data/raw "${STAGE}/data/"
+          mkdir -p dist/upload
+          (cd dist/stage && python -m zipfile -c "../upload/${NAME}.zip" "${NAME}")
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-analyse-${{ matrix.asset }}
+          path: dist/upload/api-analyse-${{ matrix.asset }}.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Attach zips to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip

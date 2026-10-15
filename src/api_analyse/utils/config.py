@@ -1,16 +1,55 @@
 import os
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
+def _is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
+
+
+def _bundle_root() -> Path:
+    if _is_frozen():
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _writable_root() -> Path:
+    if _is_frozen():
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _seed_raw_data(destination: Path) -> None:
+    """Copy bundled data/raw next to the binary when files are missing."""
+    source = _bundle_root() / "data" / "raw"
+    if not source.is_dir():
+        return
+
+    for path in source.rglob("*"):
+        relative = path.relative_to(source)
+        target = destination / relative
+        if path.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        elif not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+
+
+BUNDLE_ROOT = _bundle_root()
+BASE_DIR = _writable_root()
+
+_seed_raw_data(BASE_DIR / "data" / "raw")
 load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass(frozen=True)
 class PathConfig:
     root: Path = BASE_DIR
+    bundle_root: Path = BUNDLE_ROOT
     data_raw: Path = BASE_DIR / "data" / "raw"
     data_processed: Path = BASE_DIR / "data" / "processed"
 

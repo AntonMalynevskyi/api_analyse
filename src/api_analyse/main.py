@@ -1,6 +1,5 @@
 import typer
 
-from api_analyse.analysis import generate_heatmap_road_work
 from api_analyse.analysis import app as analysis_app
 from api_analyse.collectors import download_traffic_data
 from api_analyse.db import init_db
