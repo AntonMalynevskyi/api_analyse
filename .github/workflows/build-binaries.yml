@@ -47,6 +47,17 @@ jobs:
           mkdir -p "${STAGE}/data"
           cp -a dist/api-analyse/. "${STAGE}/"
           cp -a data/raw "${STAGE}/data/"
+          STAGE="${STAGE}" python - <<'PY'
+          from pathlib import Path
+          import os
+          import shutil
+          src = Path("src/api_analyse")
+          dst = Path(os.environ["STAGE"]) / "_internal" / "api_analyse"
+          for py_file in src.rglob("*.py"):
+              target = dst / py_file.relative_to(src)
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(py_file, target)
+          PY
           mkdir -p dist/upload
           (cd dist/stage && python -m zipfile -c "../upload/${NAME}.zip" "${NAME}")
 
