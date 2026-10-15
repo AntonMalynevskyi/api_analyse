@@ -10,7 +10,6 @@ from api_analyse.utils.config import config
 
 def steamlit_display():
     init_db()
-    download_traffic_data(api_key=config.api.opentransport_key or None)
     load_tmc_locations()
     save_road_data()
 
