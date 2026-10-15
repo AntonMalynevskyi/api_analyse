@@ -5,7 +5,10 @@ from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 project_root = Path(SPECPATH)
 
-datas = [(str(project_root / "data" / "raw"), "data/raw")]
+datas = [
+    (str(project_root / "data" / "raw"), "data/raw"),
+    (str(project_root / ".env.example"), "."),
+]
 package_src = project_root / "src" / "api_analyse"
 for py_file in package_src.rglob("*.py"):
     datas.append((str(py_file), str(py_file.relative_to(project_root / "src").parent)))

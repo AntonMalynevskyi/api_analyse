@@ -42,7 +42,15 @@ def _seed_raw_data(destination: Path) -> None:
 BUNDLE_ROOT = _bundle_root()
 BASE_DIR = _writable_root()
 
+def _seed_env_example() -> None:
+    source = _bundle_root() / ".env.example"
+    target = BASE_DIR / ".env.example"
+    if source.is_file() and not target.exists():
+        shutil.copy2(source, target)
+
+
 _seed_raw_data(BASE_DIR / "data" / "raw")
+_seed_env_example()
 load_dotenv(BASE_DIR / ".env")
 
 

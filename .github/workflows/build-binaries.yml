@@ -38,7 +38,7 @@ jobs:
       - name: Build binary
         run: uv run pyinstaller --noconfirm --clean api-analyse.spec
 
-      - name: Package binary with data/raw
+      - name: Package binary with data/raw and .env.example
         shell: bash
         run: |
           set -euo pipefail
@@ -47,6 +47,7 @@ jobs:
           mkdir -p "${STAGE}/data"
           cp -a dist/api-analyse/. "${STAGE}/"
           cp -a data/raw "${STAGE}/data/"
+          cp -a .env.example "${STAGE}/.env.example"
           STAGE="${STAGE}" python - <<'PY'
           from pathlib import Path
           import os
