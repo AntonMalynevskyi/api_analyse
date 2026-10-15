@@ -59,14 +59,13 @@ jobs:
               target.parent.mkdir(parents=True, exist_ok=True)
               shutil.copy2(py_file, target)
           PY
-          mkdir -p dist/upload
-          (cd dist/stage && python -m zipfile -c "../upload/${NAME}.zip" "${NAME}")
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-analyse-${{ matrix.asset }}
-          path: dist/upload/api-analyse-${{ matrix.asset }}.zip
+          path: dist/stage/api-analyse-${{ matrix.asset }}/
+          include-hidden-files: true
           if-no-files-found: error
 
   release:
@@ -80,9 +79,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
+
+      - name: Zip each platform once
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          for dir in artifacts/api-analyse-*; do
+            name="$(basename "${dir}")"
+            (cd artifacts && python -m zipfile -c "../dist/release/${name}.zip" "${name}")
+          done
 
       - name: Attach zips to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.zip
+          files: dist/release/*.zip
