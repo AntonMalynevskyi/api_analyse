@@ -1,4 +1,4 @@
-from api_analyse import streamlit as st
+import streamlit as st
 
 from api_analyse.analysis.chart_road_works import generate_chart_road_work
 from api_analyse.analysis.heatmap_road_works import generate_heatmap_road_work
