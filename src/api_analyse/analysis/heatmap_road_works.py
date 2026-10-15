@@ -15,15 +15,22 @@ HEATMAP_QUERY = text(
            longitude
     FROM traffic_situations
     WHERE latitude IS NOT NULL
-      AND longitude IS NOT NULL;
+      AND longitude IS NOT NULL
+      AND record_type IN ("ConstructionWorks",
+                          "GeneralInstructionOrMessageToRoadUsers",
+                          "GeneralNetworkManagement",
+                          "MaintenanceWorks",
+                          "ReroutingManagement",
+                          "RoadOrCarriagewayOrLaneManagement",
+                          "SpeedManagement");
     """
 )
 
 
-def generate_heatmap(
-        output_path: str = config.paths.data_processed / "switzerland_traffic_heatmap.html",
+def generate_heatmap_road_work(
+        output_path: str = config.paths.data_processed / "switzerland_road_works_heatmap.html",
 ) -> Path | None:
-    """Generates an HTML heatmap of traffic incidents across Switzerland."""
+    """Generates an HTML heatmap of road works across Switzerland."""
 
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -46,5 +53,6 @@ def generate_heatmap(
             print(f"Heatmap saved to: {output_file}")
             return output_file
     except DatabaseError:
-        print("Database error. Probably, database file wasn't created or it is empty. Please run \'api-analyse load-traffic\'")
+        print(
+            "Database error. Probably, database file wasn't created or it is empty. Please run \'api-analyse load-traffic\'")
     return None

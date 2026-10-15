@@ -1,7 +1,7 @@
 import typer
 
 from api_analyse.collectors.download_traffic_data import download_traffic_data
-from api_analyse.analysis import generate_heatmap
+from api_analyse.analysis import generate_heatmap_road_work
 from api_analyse.parsers.parse_road_data import save_road_data
 from api_analyse.parsers.parse_tmc import load_tmc_locations
 from api_analyse.utils.config import config
@@ -29,7 +29,7 @@ def main() -> None:
     else:
         print(f"Warning: File not found at {xml_path}. Skipping road data ingestion.")
 
-    output_file = generate_heatmap()
+    output_file = generate_heatmap_road_work()
     print(f"Pipeline finished successfully. Map saved to: {output_file}")
 
 
