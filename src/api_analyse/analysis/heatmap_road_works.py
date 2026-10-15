@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from folium import Map
 from pandas.errors import DatabaseError
 
 import folium
@@ -26,10 +28,9 @@ HEATMAP_QUERY = text(
     """
 )
 
-
 def generate_heatmap_road_work(
         output_path: str = config.paths.data_processed / "switzerland_road_works_heatmap.html",
-) -> Path | None:
+) -> Map | None:
     """Generates an HTML heatmap of road works across Switzerland."""
 
     output_file = Path(output_path)
@@ -51,7 +52,7 @@ def generate_heatmap_road_work(
             ).add_to(m)
             m.save(output_file)
             print(f"Heatmap saved to: {output_file}")
-            return output_file
+            return m
     except DatabaseError:
         print(
             "Database error. Probably, database file wasn't created or it is empty. Please run 'api-analyse data'")
