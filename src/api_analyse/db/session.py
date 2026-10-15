@@ -18,9 +18,18 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+def sqlite_db_path() -> Path:
+    return config.paths.data_processed / config.db.db_name
+
+
+def ensure_db_dir() -> None:
+    sqlite_db_path().parent.mkdir(parents=True, exist_ok=True)
+
+
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
     """Provides a transactional database session scope."""
+    ensure_db_dir()
     session = SessionLocal()
     try:
         yield session
@@ -36,11 +45,8 @@ def init_db() -> None:
     """Creates tables if they do not exist (useful for quick prototyping/testing)."""
     from api_analyse.db.base import Base
 
+    ensure_db_dir()
     Base.metadata.create_all(bind=engine)
-
-
-def sqlite_db_path() -> Path:
-    return config.paths.data_processed / config.db.db_name
 
 
 def has_traffic_data() -> bool:

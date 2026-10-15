@@ -4,6 +4,7 @@ from api_analyse.analysis import generate_heatmap_road_work
 from api_analyse.analysis import app as analysis_app
 from api_analyse.collectors import download_traffic_data
 from api_analyse.db import init_db
+from api_analyse.display import run_showcase_pipeline
 from api_analyse.parsers import app as parser_app
 from api_analyse.parsers.parse_road_data import save_road_data
 from api_analyse.parsers.parse_tmc import load_tmc_locations
@@ -14,12 +15,16 @@ app.add_typer(analysis_app, name="generate")
 
 data_app = typer.Typer(
     help="Download raw data and load it into the database. "
-    "Run without a subcommand to download traffic data and load TMC plus traffic records.",
+         "Run without a subcommand to download traffic data and load TMC plus traffic records.",
     no_args_is_help=False,
 )
 data_app.command(name="download")(download_traffic_data)
 data_app.add_typer(parser_app, name="load")
 app.add_typer(data_app, name="data")
+
+app.command(name="showcase", help="Showcase graphics in a browser. "
+                                  "Can be used as a main command, "
+                                  "that will do the full pipeline")(run_showcase_pipeline)
 
 
 def ingest_data() -> None:
@@ -37,7 +42,7 @@ def run_data_pipeline(ctx: typer.Context) -> None:
     ingest_data()
 
 
-@app.command()
+'''
 def main() -> None:
     init_db()
 
@@ -53,7 +58,7 @@ def main() -> None:
 
     output_file = generate_heatmap_road_work()
     print(f"Pipeline finished successfully. Map saved to: {output_file}")
-
+'''
 
 if __name__ == "__main__":
     app()
