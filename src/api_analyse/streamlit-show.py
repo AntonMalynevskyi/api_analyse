@@ -2,14 +2,15 @@ import subprocess
 import sys
 
 from api_analyse.analysis import generate_graphics
+from api_analyse.collectors import download_traffic_data
 from api_analyse.db import init_db
 from api_analyse.parsers import load_tmc_locations, save_road_data
 from api_analyse.utils.config import config
 
 
 def steamlit_display():
-    from api_analyse.main import ingest_data
     init_db()
+    download_traffic_data(api_key=config.api.opentransport_key or None)
     load_tmc_locations()
     save_road_data()
 
