@@ -78,8 +78,6 @@ uv sync
 uv run api-analyse showcase
 ```
 
-This processes the bundled traffic snapshot and opens the browser app; no API key is needed. To refresh the data first, create `.env` from `.env.example`, add your key, then run `uv run api-analyse data download`, `uv run api-analyse data load tmc`, `uv run api-analyse data load traffic`, and `uv run api-analyse showcase`. You can also pass the key directly to `uv run api-analyse data download --api-key YOUR_API_KEY`.
-
 ## Commands
 
 | Command | What it does |
